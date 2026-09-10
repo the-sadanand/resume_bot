@@ -16,6 +16,7 @@ python-docx==1.1.2
 # Lightweight matching
 scikit-learn>=1.7.0,<2
 numpy>=2.1.0,<3
+Pillow>=10.0.0,<12
 
 # Telegram
 python-telegram-bot==21.3
