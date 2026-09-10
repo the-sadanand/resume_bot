@@ -2,7 +2,6 @@
 import hashlib
 import io
 import re
-from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -399,7 +398,17 @@ async def telegram_webhook(request: Request):
     if text.startswith("/reset"):
         session.update({"state": "idle", "jd": "", "resumes": []}); await send_message(chat_id, "✅ Reset complete. Use /analyze to start."); return {"ok": True}
     if text.startswith("/analyze"):
-        session.update({"state": "awaiting_jd", "jd": "", "resumes": []}); await send_message(chat_id, "📋 Send the complete Job Description text now."); return {"ok": True}
+        session.update({"state": "awaiting_jd", "jd": "", "resumes": []}); await send_message(chat_id, "📋 Send the complete Job Description text now.\n\n⚠️ Please send the JD as text, not as a resume file."); return {"ok": True}
+
+    # A document is never a valid JD input. Handle it explicitly so the bot
+    # does not silently ignore a PDF/DOCX resume sent at the wrong step.
+    if session["state"] == "awaiting_jd" and document:
+        filename = document.get("file_name", "document")
+        if filename.lower().endswith((".pdf", ".docx")):
+            await send_message(chat_id, "❌ You are currently at the Job Description step.\n\nThat file looks like a resume/document, but I need the Job Description text first.\n\n📋 Please paste or type the JD here, then I will ask you to upload resumes.")
+        else:
+            await send_message(chat_id, "❌ I am waiting for the Job Description text.\n\nPlease paste the JD here instead of uploading a file.")
+        return {"ok": True}
 
     if session["state"] == "awaiting_jd" and text and not text.startswith("/"):
         valid, reason = validate_jd(text)
