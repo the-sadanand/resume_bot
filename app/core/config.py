@@ -2,9 +2,7 @@
 AI Resume Screening & Ranking Bot
 Core Configuration
 """
-import os
 from functools import lru_cache
-from typing import Optional
 
 from pydantic_settings import BaseSettings
 
@@ -19,7 +17,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # LLM Provider
-    llm_provider: str = "none"  # none | ollama | openai
+    llm_provider: str = "none"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3"
     openai_api_key: str = ""
@@ -29,8 +27,10 @@ class Settings(BaseSettings):
     # Telegram
     telegram_bot_token: str = ""
 
-    # Discord
+    # Discord interactions
     discord_bot_token: str = ""
+    discord_application_id: str = ""
+    discord_public_key: str = ""
 
     # Google Chat
     google_chat_project_id: str = ""
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     temp_dir: str = "./temp"
     generated_dir: str = "./generated"
 
-    # Scoring Weights (should sum to 100)
+    # Scoring Weights
     weight_skills: int = 35
     weight_experience: int = 20
     weight_projects: int = 15
@@ -97,12 +97,11 @@ class Settings(BaseSettings):
     def get_score_category(self, score: float) -> str:
         if score >= self.threshold_strong:
             return "Strong Match"
-        elif score >= self.threshold_good:
+        if score >= self.threshold_good:
             return "Good Match"
-        elif score >= self.threshold_moderate:
+        if score >= self.threshold_moderate:
             return "Moderate Match"
-        else:
-            return "Weak Match"
+        return "Weak Match"
 
 
 @lru_cache()
