@@ -1,0 +1,86 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+.installed.cfg
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Data and generated files
+data/
+generated/
+temp/
+*.db
+*.sqlite
+*.sqlite3
+
+# Model caches (can be very large)
+.cache/
+models/
+sentence_transformers/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Credentials
+credentials.json
+service_account.json
+*.pem
+*.key
+*.cert
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
