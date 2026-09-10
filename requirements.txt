@@ -1,8 +1,8 @@
 # Core
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
-pydantic==2.7.4
-pydantic-settings==2.3.4
+pydantic>=2.12.0,<3
+pydantic-settings>=2.7.0,<3
 httpx==0.27.0
 
 # Database
@@ -14,8 +14,8 @@ PyMuPDF>=1.26.0
 python-docx==1.1.2
 
 # Lightweight matching
-scikit-learn==1.5.1
-numpy==1.26.4
+scikit-learn>=1.7.0,<2
+numpy>=2.1.0,<3
 
 # Telegram
 python-telegram-bot==21.3
