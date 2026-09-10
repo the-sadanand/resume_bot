@@ -1,4 +1,4 @@
-"""FastAPI application for the Telegram-only resume screening showcase."""
+"""FastAPI application for the multi-channel resume screening showcase."""
 import os
 from contextlib import asynccontextmanager
 
@@ -9,6 +9,7 @@ from app.core.logging import setup_logging, get_logger
 from app.storage.database import init_db
 from app.api.routes.health import router as health_router
 from app.integrations.telegram import router as telegram_router
+from app.integrations.multichannel import router as multichannel_router
 
 settings = get_settings()
 setup_logging()
@@ -21,20 +22,21 @@ async def lifespan(app: FastAPI):
     init_db()
     for directory in [settings.temp_dir, settings.generated_dir, "data"]:
         os.makedirs(directory, exist_ok=True)
-    logger.info("Telegram-only screening service is ready")
+    logger.info("Multi-channel screening service is ready")
     yield
     logger.info("Shutting down...")
 
 
 app = FastAPI(
     title="AI Resume Screening & Ranking Bot",
-    description="Telegram-only AI-assisted resume screening showcase.",
+    description="Resume screening bot accessible through Telegram, Discord, Google Chat and WhatsApp.",
     version=settings.app_version,
     lifespan=lifespan,
 )
 
 app.include_router(health_router)
 app.include_router(telegram_router)
+app.include_router(multichannel_router)
 
 
 @app.get("/", include_in_schema=False)
@@ -43,5 +45,10 @@ async def root():
         "app": settings.app_name,
         "version": settings.app_version,
         "health": "/health",
-        "telegram_webhook": "/integrations/telegram/webhook",
+        "integrations": {
+            "telegram": "/integrations/telegram/webhook",
+            "discord": "/integrations/discord/interactions",
+            "google_chat": "/integrations/google-chat/events",
+            "whatsapp": "/integrations/whatsapp/webhook",
+        },
     }
