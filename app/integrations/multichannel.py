@@ -83,13 +83,13 @@ def screen_session(session):
     for item in session["resumes"]:
         result = score_resume(session["jd"], item["text"])
         ranked.append((item["filename"], result))
-    ranked.sort(key=lambda x: x[1]["overall_score"], reverse=True)
+    ranked.sort(key=lambda x: x[1]["overall"], reverse=True)
     chunks = ["🏆 **RESUME SCREENING RANKING**", "", f"Candidates: {len(ranked)}"]
     for idx, (filename, result) in enumerate(ranked, 1):
         chunks.append(
-            f"**{idx}. {filename}** — {result['overall_score']:.1f}/100 ({result['category']})\n"
-            f"Skills {result['components']['skills']:.0f}% · Experience {result['components']['experience']:.0f}% · "
-            f"Projects {result['components']['projects']:.0f}% · JD {result['components']['jd_match']:.0f}%"
+            f"**{idx}. {filename}** — {result['overall']:.1f}/100 ({result['recommendation']})\n"
+            f"Skills {result['skills']:.0f}% · Experience {result['experience']:.0f}% · "
+            f"Projects {result['projects']:.0f}% · JD {result['jd_match']:.0f}%"
         )
     chunks.append("")
     chunks.append("Send another resume to add it, or start a new session with /analyze.")
@@ -212,7 +212,6 @@ async def discord_interactions(
         filename = attachment.get("filename", "resume.pdf")
         if not filename.lower().endswith((".pdf", ".docx")):
             return {"type": 4, "data": {"content": "❌ Only PDF and DOCX resumes are supported."}}
-        await request.app.state.discord_dummy if False else None
         try:
             data = await discord_download(attachment.get("url", ""))
             ok, message = add_resume(session, filename, data)
