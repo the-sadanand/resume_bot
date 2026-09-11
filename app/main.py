@@ -9,6 +9,7 @@ from app.core.logging import setup_logging, get_logger
 from app.storage.database import init_db
 from app.api.routes.health import router as health_router
 from app.integrations.telegram import router as telegram_router
+from app.integrations.google_chat_rich import router as google_chat_rich_router
 from app.integrations.multichannel import router as multichannel_router
 
 settings = get_settings()
@@ -36,6 +37,8 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(telegram_router)
+# Register the rich Google Chat route first so it handles /screen with cards.
+app.include_router(google_chat_rich_router)
 app.include_router(multichannel_router)
 
 
