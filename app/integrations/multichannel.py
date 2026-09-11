@@ -30,7 +30,7 @@ from app.integrations.telegram import (
 try:
     from nacl.signing import VerifyKey
     from nacl.exceptions import BadSignatureError
-except Exception:  # pragma: no cover
+except Exception:
     VerifyKey = None
     BadSignatureError = Exception
 
@@ -79,28 +79,71 @@ def screen_session(session):
         return "Please send the Job Description first."
     if not session["resumes"]:
         return "Please upload at least one resume first."
+
     ranked = []
     for item in session["resumes"]:
         result = score_resume(session["jd"], item["text"])
         ranked.append((item["filename"], result))
     ranked.sort(key=lambda x: x[1]["overall"], reverse=True)
-    chunks = ["🏆 **RESUME SCREENING RANKING**", "", f"Candidates: {len(ranked)}"]
+
+    # Use the exact same formatter as Telegram so Discord has the same
+    # detailed score breakdown, skill check, strengths, gaps and verdict.
+    blocks = []
+    total = len(ranked)
     for idx, (filename, result) in enumerate(ranked, 1):
-        chunks.append(
-            f"**{idx}. {filename}** — {result['overall']:.1f}/100 ({result['recommendation']})\n"
-            f"Skills {result['skills']:.0f}% · Experience {result['experience']:.0f}% · "
-            f"Projects {result['projects']:.0f}% · JD {result['jd_match']:.0f}%"
-        )
-    chunks.append("")
-    chunks.append("Send another resume to add it, or start a new session with /analyze.")
-    return "\n\n".join(chunks)
+        blocks.append(format_result(filename, result, idx, total))
+
+    # Discord's normal message limit is 2000 characters. Keep the detailed
+    # Telegram-style output intact for the top candidate and add a compact
+    # ranking for the remaining candidates when necessary.
+    first = blocks[0]
+    if len(first) <= 1900:
+        output = first
+        if len(ranked) > 1:
+            ranking = ["", "🏆 **RANKING**"]
+            for idx, (filename, result) in enumerate(ranked, 1):
+                ranking.append(f"#{idx} {filename} — {result['overall']:.1f}/100 {result['recommendation']}")
+            extra = "\n".join(ranking)
+            if len(output) + len(extra) + 2 <= 1900:
+                output += "\n\n" + extra
+        return output
+
+    # If the detailed formatter is too long for one Discord response, keep
+    # the most useful sections and the same visual score bars.
+    result = ranked[0][1]
+    compact = [
+        "━━━━━━━━━━━━━━━━━━━━",
+        "🤖 RESUME INSIGHT",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"👤 {ranked[0][0]}",
+        f"🏆 RANK #1/{total}",
+        f"🎯 OVERALL MATCH: {result['overall']:.1f}/100",
+        f"📌 {result['recommendation']}",
+        f"🔎 Evidence Confidence: {result['confidence']}",
+        "",
+        "📊 MATCH BREAKDOWN",
+        f"Skills       {'█' * round(result['skills']/100*12)}{'░' * (12-round(result['skills']/100*12))} {result['skills']:.0f}%",
+        f"Experience   {'█' * round(result['experience']/100*12)}{'░' * (12-round(result['experience']/100*12))} {result['experience']:.0f}%",
+        f"Projects     {'█' * round(result['projects']/100*12)}{'░' * (12-round(result['projects']/100*12))} {result['projects']:.0f}%",
+        f"Education    {'█' * round(result['education']/100*12)}{'░' * (12-round(result['education']/100*12))} {result['education']:.0f}%",
+        f"JD Match     {'█' * round(result['jd_match']/100*12)}{'░' * (12-round(result['jd_match']/100*12))} {result['jd_match']:.0f}%",
+        f"Completeness {'█' * round(result['completeness']/100*12)}{'░' * (12-round(result['completeness']/100*12))} {result['completeness']:.0f}%",
+        "",
+        "💻 SKILL CHECK",
+    ]
+    compact += [f"{'✅' if s in result['required_matched'] else '❌'} {s} — REQUIRED" for s in result["required"][:8]]
+    compact += [f"{'🟢' if s in result['preferred_matched'] else '⚪'} {s} — PREFERRED" for s in result["preferred"][:5]]
+    compact += ["", "💪 STRENGTHS"] + [f"• {x}" for x in result["strengths"][:2]]
+    compact += ["", "⚠️ GAPS"] + [f"• {x}" for x in result["gaps"][:3]]
+    compact += ["", "📌 FINAL VERDICT", result["recommendation"], "━━━━━━━━━━━━━━━━━━━━"]
+    return "\n".join(compact)[:1900]
 
 
 def help_text(channel: str):
     if channel == "discord":
         return (
             "📄 **Resume Screening Bot**\n\n"
-            "1. `/analyze` — start a screening session\n"
+            "1. `/analyze` — start a resume screening session\n"
             "2. `/jd` — send the Job Description text\n"
             "3. `/resume` — attach a PDF/DOCX resume\n"
             "4. `/screen` — rank all uploaded resumes\n"
@@ -115,8 +158,6 @@ def help_text(channel: str):
         "5. Send `/reset` to start over"
     )
 
-
-# ---------------- Discord ----------------
 
 DISCORD_COMMANDS = [
     {"name": "analyze", "description": "Start a resume screening session"},
@@ -160,7 +201,6 @@ async def discord_followup(application_id: str, token: str, content: str):
 
 @router.get("/discord/commands")
 async def discord_commands():
-    """Returns the command JSON to paste/use when registering the Discord app."""
     return DISCORD_COMMANDS
 
 
@@ -222,8 +262,6 @@ async def discord_interactions(
         return {"type": 4, "data": {"content": screen_session(session)[:1900]}}
     return {"type": 4, "data": {"content": "Unknown command. Use `/help`."}}
 
-
-# ---------------- WhatsApp ----------------
 
 async def whatsapp_send(to: str, text: str):
     if not settings.whatsapp_access_token or not settings.whatsapp_phone_number_id:
@@ -319,9 +357,6 @@ async def whatsapp_webhook(request: Request):
                 else:
                     await whatsapp_send(sender, "I support text messages and PDF/DOCX resume documents.")
     return {"ok": True}
-
-
-# ---------------- Google Chat ----------------
 
 
 def google_credentials():
